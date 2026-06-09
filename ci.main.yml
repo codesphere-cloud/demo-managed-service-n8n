@@ -1,0 +1,106 @@
+schemaVersion: v0.2
+prepare:
+  steps:
+    - name: install Node.js 24
+      command: fnm install 24 --use
+    - name: install dependencies
+      command: npm install
+test:
+  steps: []
+run:
+  n8n-frontend:
+    plan: 8
+    replicas: 1
+    network:
+      ports:
+        - port: 3000
+          isPublic: false
+      paths:
+        - port: 3000
+          path: /
+          stripPath: false
+    env:
+      N8N_USER_FOLDER: /home/user/app/
+      N8N_PROTOCOL: https
+      N8N_PORT: 3000
+      N8N_HOST: ${{ workspace.devDomain }}
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_DATABASE: app
+      DB_POSTGRESDB_HOST: ms-postgres-v1-${{ team.id }}-landscape-${{ workspace.id }}-n8n-postgres.ms-postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_USER: app
+      DB_POSTGRESDB_PASSWORD: ${{ vault['PG_PW'] }}
+      EXECUTIONS_MODE: queue
+      QUEUE_BULL_REDIS_HOST: valkey-6ad42b0a-a9a1-4950-afa3-3428bf307f7c.rg-5.svc.cluster.local
+      QUEUE_HEALTH_CHECK_ACTIVE: "true"
+      QUEUE_BULL_REDIS_PORT: 6379
+      QUEUE_BULL_REDIS_PASSWORD: test
+    steps:
+      - name: n8n start
+        command: ./node_modules/n8n/bin/n8n start
+  n8n-worker:
+    healthEndpoint: http://localhost:5678/healthz
+    plan: 101
+    replicas: 1
+    network:
+      ports:
+        - port: 3000
+          isPublic: false
+        - port: 5678
+          isPublic: false
+      paths: []
+    env:
+      N8N_USER_FOLDER: /home/user/app/
+      N8N_PROTOCOL: https
+      N8N_PORT: 3000
+      N8N_HOST: ${{ workspace.devDomain }}
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_DATABASE: app
+      DB_POSTGRESDB_HOST: ms-postgres-v1-${{ team.id }}-landscape-${{ workspace.id }}-n8n-postgres.ms-postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_USER: app
+      DB_POSTGRESDB_PASSWORD: ${{ vault['PG_PW'] }}
+      EXECUTIONS_MODE: queue
+      QUEUE_BULL_REDIS_HOST: valkey-6ad42b0a-a9a1-4950-afa3-3428bf307f7c.rg-5.svc.cluster.local
+      QUEUE_HEALTH_CHECK_ACTIVE: "true"
+      QUEUE_BULL_REDIS_PORT: 6379
+      QUEUE_BULL_REDIS_PASSWORD: test
+    steps:
+      - name: n8n start
+        command: ./node_modules/n8n/bin/n8n worker
+  rabbit-mq-dashboard:
+    network:
+      paths:
+        - path: /rabbitmq
+          stripPath: true
+          target: http://rabbitmq-b0d0cd77-56ec-4c93-accc-27ab09e18a08.rg-5.svc.cluster.local:15672
+  llamacpp:
+    healthEndpoint: http://localhost:8080/
+    plan: 402
+    replicas: 1
+    network:
+      ports:
+        - port: 3000
+          isPublic: false
+        - port: 8080
+          isPublic: false
+      paths: []
+    env:
+      HF_HOME: /home/user/app/huggingface
+    steps:
+      - command: curl -LsSf https://llama.app/install.sh | sh
+      - command: llama serve -hf ggml-org/gemma-4-E4B-it-GGUF:Q4_K_M --port 8080 --host 0.0.0.0
+  n8n-postgres:
+    provider:
+      name: postgres
+      version: v1
+    plan:
+      id: 3
+      parameters:
+        cpu: 20
+        memory: 4096
+    config:
+      version: "17.9"
+    secrets:
+      userPassword: ${{ vault['PG_PW'] }}
+      superuserPassword: ${{ vault['PG_SUPERUSER_PW'] }}

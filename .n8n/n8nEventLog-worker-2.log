@@ -1,0 +1,2 @@
+{"__type":"$$EventMessage","id":"42f67eb1-a2c4-4800-b8b5-cc5ce6716640","ts":"2026-06-08T21:33:53.313+00:00","eventName":"n8n.worker.started","message":"n8n.worker.started","payload":{"workerId":"worker-workspace-ddfff523-426d-4fb3-ae5c-2e161baf7a33-69655df49d-27g8d"}}
+{"__type":"$$EventMessageConfirm","confirm":"42f67eb1-a2c4-4800-b8b5-cc5ce6716640","ts":"2026-06-08T21:33:53.313+00:00","source":{"id":"0","name":"eventBus"}}
